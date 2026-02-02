@@ -219,6 +219,13 @@ export const ensureSession = async () => {
     }
     
     if (result.error) {
+      // Handle refresh token errors
+      if (isRefreshTokenError(result.error)) {
+        console.warn('⚠️ Invalid refresh token - clearing session')
+        clearSessionStorage()
+        return { valid: false, session: null, source: 'invalid-token' }
+      }
+      
       // Check for expected errors (user logged out)
       if (result.error.name === 'AuthSessionMissingError' ||
           result.error.message?.includes('session missing')) {
@@ -253,6 +260,19 @@ export const ensureSession = async () => {
 }
 
 /**
+ * Check if error is a refresh token error
+ */
+const isRefreshTokenError = (error) => {
+  if (!error) return false
+  const message = error.message?.toLowerCase() || ''
+  return (
+    message.includes('refresh token not found') ||
+    message.includes('invalid refresh token') ||
+    error.name === 'AuthApiError' && message.includes('refresh')
+  )
+}
+
+/**
  * Refresh session in background (fire and forget)
  * Used when session is valid but expiring soon
  */
@@ -261,6 +281,13 @@ const refreshSessionInBackground = async () => {
     const { data, error } = await currentClient.auth.refreshSession()
     
     if (error) {
+      // Handle refresh token errors by clearing session
+      if (isRefreshTokenError(error)) {
+        console.warn('⚠️ Invalid refresh token detected - clearing session')
+        clearSessionStorage()
+        return
+      }
+      
       // Ignore expected errors
       if (error.name === 'AuthSessionMissingError') return
       console.warn('⚠️ Background refresh error:', error.message)

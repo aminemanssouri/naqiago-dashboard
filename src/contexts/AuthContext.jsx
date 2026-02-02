@@ -293,8 +293,8 @@ export function AuthProvider({ children }) {
           setUser(currentSession.user)
         }
       }
-    } else if (result.source === 'logout' || result.source === 'none') {
-      // No valid session - clear state if we had one
+    } else if (result.source === 'logout' || result.source === 'none' || result.source === 'invalid-token') {
+      // No valid session or invalid token - clear state if we had one
       if (user || session) {
         console.log('📭 Session lost - clearing state')
         setUser(null)
@@ -495,7 +495,17 @@ export function AuthProvider({ children }) {
         console.log('🔄 Periodic session refresh...')
         try {
           const { data, error } = await supabase.auth.refreshSession()
-          if (!error && data?.session) {
+          if (error) {
+            // Check if it's a refresh token error
+            const errorMessage = error.message?.toLowerCase() || ''
+            if (errorMessage.includes('refresh token not found') || 
+                errorMessage.includes('invalid refresh token')) {
+              console.warn('⚠️ Invalid refresh token - signing out')
+              await signOut()
+              return
+            }
+            console.warn('⚠️ Periodic refresh error:', error.message)
+          } else if (data?.session) {
             console.log('✅ Periodic refresh successful')
             setSession(data.session)
             setUser(data.session.user)

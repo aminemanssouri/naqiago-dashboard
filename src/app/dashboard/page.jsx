@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { supabase, ensureSession } from '@/services/supabaseClient'
 import { DashboardPage } from "@/components/dashboard-page"
 import { SectionCards } from "@/components/section-cards"
@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils'
 export default function DashboardOverviewPage() {
   const { profile, loading: authLoading } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const isMounted = useRef(true)
@@ -191,6 +192,14 @@ export default function DashboardOverviewPage() {
         try {
           const { data, error } = await supabase.auth.refreshSession()
           if (error) {
+            // Check if it's a refresh token error
+            const errorMessage = error.message?.toLowerCase() || ''
+            if (errorMessage.includes('refresh token not found') || 
+                errorMessage.includes('invalid refresh token')) {
+              console.error('❌ Invalid refresh token - redirecting to login')
+              router.push('/login')
+              return
+            }
             console.error('❌ Session refresh failed:', error.message)
             // Continue anyway, but log the error
           } else if (data?.session) {
