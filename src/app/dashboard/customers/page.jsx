@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { exportToCSV, EXPORT_COLUMNS } from "@/utils/export";
 import { useAuth } from "@/contexts/AuthContext";
-import { ensureSession } from "@/services/supabaseClient";
 
 export default function CustomersPage() {
   const router = useRouter();
@@ -45,9 +44,6 @@ export default function CustomersPage() {
 
     try {
       setLoading(true);
-      
-      // Ensure session is fresh before fetching
-      await ensureSession();
 
       const response = await getCustomers(filters);
 

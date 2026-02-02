@@ -13,7 +13,6 @@ import { getServices, getServiceStats, getServiceCategories } from "@/services/s
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { ensureSession } from "@/services/supabaseClient";
 
 export default function ServicesPage() {
   const router = useRouter();
@@ -52,9 +51,6 @@ export default function ServicesPage() {
 
     try {
       setLoading(true);
-      
-      // Ensure session is fresh before fetching (prevents timeout on navigation back)
-      await ensureSession();
 
       const response = await getServices(filters);
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { supabase, ensureSession } from '@/services/supabaseClient'
+import { supabase } from '@/services/supabaseClient'
 import { DashboardPage } from "@/components/dashboard-page"
 import { SectionCards } from "@/components/section-cards"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
@@ -70,9 +70,6 @@ export default function DashboardOverviewPage() {
     try {
       console.log('📊 Fetching dashboard data...')
       setLoading(true)
-      
-      // Ensure session is fresh before fetching (critical for navigation back)
-      await ensureSession()
 
       const [
         overviewData,

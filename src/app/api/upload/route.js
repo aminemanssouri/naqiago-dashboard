@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/services/supabaseClient'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request) {
   try {
+    const supabase = await createClient()
+    
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Service not available' },
+        { status: 503 }
+      )
+    }
+
     const formData = await request.formData()
     const file = formData.get('file')
 
