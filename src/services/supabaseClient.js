@@ -380,6 +380,42 @@ const safeAuthFallback = {
   signInWithOAuth: noopAsync,
 }
 
+// Safe chainable query builder for when client is null
+const createSafeQueryBuilder = () => {
+  const builder = {
+    select: () => builder,
+    insert: () => builder,
+    update: () => builder,
+    delete: () => builder,
+    upsert: () => builder,
+    eq: () => builder,
+    neq: () => builder,
+    gt: () => builder,
+    gte: () => builder,
+    lt: () => builder,
+    lte: () => builder,
+    like: () => builder,
+    ilike: () => builder,
+    is: () => builder,
+    in: () => builder,
+    contains: () => builder,
+    containedBy: () => builder,
+    range: () => builder,
+    overlaps: () => builder,
+    filter: () => builder,
+    not: () => builder,
+    or: () => builder,
+    and: () => builder,
+    order: () => builder,
+    limit: () => builder,
+    offset: () => builder,
+    single: () => noopAsync(),
+    maybeSingle: () => noopAsync(),
+    then: (resolve) => resolve({ data: null, error: new Error('Supabase client not initialized') }),
+  }
+  return builder
+}
+
 // This proxy ensures that after recreateClient(), all existing imports
 // still work because they reference this proxy, not the old client
 const supabaseProxy = {
@@ -389,18 +425,30 @@ const supabaseProxy = {
   get functions() { return currentClient?.functions },
   get realtime() { return currentClient?.realtime },
   
-  // Method proxies
-  from(table) { return currentClient?.from(table) },
-  rpc(fn, params, options) { return currentClient?.rpc(fn, params, options) },
+  // Method proxies - return safe fallbacks when client is null
+  from(table) { 
+    if (!currentClient) {
+      console.warn('⚠️ Supabase client not initialized - from() returning safe fallback')
+      return createSafeQueryBuilder()
+    }
+    return currentClient.from(table) 
+  },
+  rpc(fn, params, options) { 
+    if (!currentClient) return noopAsync()
+    return currentClient.rpc(fn, params, options) 
+  },
   channel(name, opts) { return currentClient?.channel(name, opts) },
   removeChannel(channel) { return currentClient?.removeChannel(channel) },
   removeAllChannels() { return currentClient?.removeAllChannels() },
-  getChannels() { return currentClient?.getChannels() },
+  getChannels() { return currentClient?.getChannels() || [] },
 }
 
 // ============================================================
 // EXPORTS
 // ============================================================
+
+// Check if client is properly initialized
+export const isClientInitialized = () => currentClient !== null
 
 // Main export - always use this
 export const supabase = supabaseProxy

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { getSessionFromStorage, isSessionValid } from '@/services/supabaseClient'
 import { Loader2 } from 'lucide-react'
 
 // Maximum time to wait for auth check before showing error
@@ -14,7 +15,7 @@ export function ProtectedRoute({
   redirectTo = '/login',
   requireAuth = true 
 }) {
-  const { user, profile, loading, isAuthenticated } = useAuth()
+  const { user, profile, loading, isAuthenticated, session } = useAuth()
   const router = useRouter()
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [authCheckComplete, setAuthCheckComplete] = useState(false)
@@ -46,48 +47,61 @@ export function ProtectedRoute({
       clearTimeout(timeoutRef.current)
     }
 
-    
+    // Check if user has a valid session (either from context or localStorage)
+    const hasValidSession = !!session || !!user || (() => {
+      const stored = getSessionFromStorage()
+      return stored && isSessionValid(stored, 0)
+    })()
 
-    // If authentication is required but user is not authenticated
-    if (requireAuth && !isAuthenticated) {
-       router.replace(redirectTo)
+    // If authentication is required but no valid session
+    if (requireAuth && !hasValidSession) {
+      console.log('🔒 No valid session - redirecting to login')
+      router.replace(redirectTo)
       setIsAuthorized(false)
+      setAuthCheckComplete(true)
       return
     }
 
-    // If user is authenticated but no profile exists
-    if (requireAuth && isAuthenticated && !profile) {
-       router.replace('/profile/setup')
-      setIsAuthorized(false)
+    // If user has session but profile is still loading, wait a bit more
+    if (requireAuth && hasValidSession && !profile) {
+      // Give profile a chance to load (handled by AuthContext profile recovery)
+      console.log('⏳ Waiting for profile...')
+      // Don't redirect immediately - the profile recovery in AuthContext will handle it
       return
     }
 
     // If specific roles are required, check if user has allowed role
     if (allowedRoles.length > 0 && profile) {
       if (!allowedRoles.includes(profile.role)) {
-         // Redirect based on user's actual role
+        console.log('🚫 Role not allowed:', profile.role)
+        // Redirect based on user's actual role
         if (profile.role === 'admin') {
           router.replace('/dashboard')
         } else {
           router.replace('/')
         }
         setIsAuthorized(false)
+        setAuthCheckComplete(true)
         return
       }
     }
 
-     setIsAuthorized(true)
-    setAuthCheckComplete(true)
+    // User is authorized
+    if (hasValidSession && profile) {
+      setIsAuthorized(true)
+      setAuthCheckComplete(true)
+    }
   }, [
     isAuthenticated, 
-    profile?.role, // ✅ Only depend on role, not entire profile
-    profile?.id,   // ✅ Only depend on id to detect profile changes
+    session,
+    user,
+    profile?.role,
+    profile?.id,
     loading, 
-    allowedRoles.join(','), // ✅ Convert array to string for stable dependency
+    allowedRoles.join(','),
     redirectTo, 
     requireAuth
   ])
-  // Removed user and router from dependencies as they're stable
 
   // Handle auth timeout - show error instead of infinite loading
   if (authTimedOut && !isAuthorized) {

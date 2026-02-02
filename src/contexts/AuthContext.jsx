@@ -68,8 +68,14 @@ export function AuthProvider({ children }) {
   
   const fetchUserProfile = useCallback(async (userId) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
+      // Check if supabase.from returns undefined (client not initialized)
+      const profilesTable = supabase.from('profiles')
+      if (!profilesTable) {
+        console.warn('⚠️ Supabase client not available for profile fetch')
+        return null
+      }
+      
+      const { data, error } = await profilesTable
         .select('*')
         .eq('id', userId)
         .single()
@@ -125,18 +131,40 @@ export function AuthProvider({ children }) {
   const signIn = useCallback(async (email, password) => {
     try {
       setLoading(true)
-
-      const { data, error } = await supabase.auth.signInWithPassword({
+      
+      // Add timeout to prevent infinite loading
+      const signInPromise = supabase.auth.signInWithPassword({
         email,
         password
       })
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Login timed out. Please check your connection and try again.')), 15000)
+      )
+      
+      const { data, error } = await Promise.race([signInPromise, timeoutPromise])
 
       if (error) {
         console.error('Sign in error:', error)
         throw error
       }
+      
+      if (!data?.user) {
+        throw new Error('Login failed. Please try again.')
+      }
 
-      const userProfile = await fetchUserProfile(data.user.id)
+      // Fetch profile with timeout
+      const profilePromise = fetchUserProfile(data.user.id)
+      const profileTimeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile fetch timed out')), 10000)
+      )
+      
+      let userProfile = null
+      try {
+        userProfile = await Promise.race([profilePromise, profileTimeoutPromise])
+      } catch (profileErr) {
+        console.warn('Profile fetch failed:', profileErr.message)
+      }
+      
       if (!userProfile) {
         throw new Error('User profile not found. Please contact support.')
       }
@@ -148,6 +176,10 @@ export function AuthProvider({ children }) {
       return { user: data.user, profile: userProfile }
     } catch (error) {
       console.error('Sign in failed:', error)
+      // Clear any partial state
+      setUser(null)
+      setSession(null)
+      setProfile(null)
       throw error
     } finally {
       setLoading(false)

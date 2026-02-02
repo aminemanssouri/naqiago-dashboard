@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { isClientInitialized } from '@/services/supabaseClient'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +26,12 @@ export function LoginForm({
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [clientReady, setClientReady] = useState(true)
+
+  // Check if Supabase client is initialized
+  useEffect(() => {
+    setClientReady(isClientInitialized())
+  }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -41,6 +48,11 @@ export function LoginForm({
     setIsSubmitting(true)
 
     try {
+      // Check client initialization
+      if (!isClientInitialized()) {
+        throw new Error('Service unavailable. Please refresh the page or contact support.')
+      }
+
       if (!formData.email || !formData.password) {
         throw new Error('Please fill in all fields')
       }
@@ -77,6 +89,15 @@ export function LoginForm({
           Enter your email below to login to your account
         </p>
       </div>
+
+      {!clientReady && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Service configuration error. Please contact support or check that environment variables are set.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">
