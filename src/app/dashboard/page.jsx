@@ -190,7 +190,15 @@ export default function DashboardOverviewPage() {
       if (needsSessionRefresh) {
         console.log('🔄 Refreshing session before fetching data...')
         try {
-          const { data, error } = await supabase.auth.refreshSession()
+          // Add timeout to prevent hanging in production
+          const refreshPromise = supabase.auth.refreshSession()
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Session refresh timeout')), 5000)
+          )
+          
+          const { data, error } = await Promise.race([refreshPromise, timeoutPromise])
+            .catch(err => ({ data: null, error: err }))
+          
           if (error) {
             // Check if it's a refresh token error
             const errorMessage = error.message?.toLowerCase() || ''
@@ -200,15 +208,14 @@ export default function DashboardOverviewPage() {
               router.push('/login')
               return
             }
-            console.error('❌ Session refresh failed:', error.message)
-            // Continue anyway, but log the error
+            console.warn('⚠️ Session refresh failed:', error.message)
+            // Continue anyway - ensureSession will handle it
           } else if (data?.session) {
             console.log('✅ Session refreshed successfully')
-            // Wait a bit for the new session to propagate
-            await new Promise(resolve => setTimeout(resolve, 100))
           }
         } catch (err) {
-          console.error('❌ Session refresh error:', err)
+          console.warn('⚠️ Session refresh error:', err.message)
+          // Continue anyway - don't block data fetching
         }
       }
 

@@ -293,10 +293,10 @@ export function AuthProvider({ children }) {
           setUser(currentSession.user)
         }
       }
-    } else if (result.source === 'logout' || result.source === 'none' || result.source === 'invalid-token') {
-      // No valid session or invalid token - clear state if we had one
+    } else if (result.source === 'logout' || result.source === 'none' || result.source === 'invalid-token' || result.source === 'no-client') {
+      // No valid session, invalid token, or client not initialized - clear state if we had one
       if (user || session) {
-        console.log('📭 Session lost - clearing state')
+        console.log('📭 Session lost - clearing state (source:', result.source, ')')
         setUser(null)
         setProfile(null)
         setSession(null)

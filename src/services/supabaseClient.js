@@ -172,6 +172,12 @@ export const isSessionValid = (session, bufferSeconds = 0) => {
  * 4. If expired/missing, try network refresh with timeout
  */
 export const ensureSession = async () => {
+  // Guard: If client is not initialized, return early
+  if (!currentClient) {
+    console.warn('⚠️ Supabase client not initialized')
+    return { valid: false, session: null, source: 'no-client' }
+  }
+  
   // Step 1: Read from localStorage (instant, no network)
   const storedSession = getSessionFromStorage()
   
@@ -277,6 +283,8 @@ const isRefreshTokenError = (error) => {
  * Used when session is valid but expiring soon
  */
 const refreshSessionInBackground = async () => {
+  if (!currentClient) return
+  
   try {
     const { data, error } = await currentClient.auth.refreshSession()
     
@@ -311,6 +319,11 @@ export const getSessionWithTimeout = async (timeoutMs = CONFIG.REFRESH_TIMEOUT) 
   const stored = getSessionFromStorage()
   if (stored && isSessionValid(stored, CONFIG.EXPIRY_BUFFER)) {
     return stored
+  }
+  
+  // Guard: If client is not initialized, return cached or null
+  if (!currentClient) {
+    return stored || null
   }
   
   // Try network
@@ -350,11 +363,28 @@ export const clearSessionStorage = () => {
 // PROXY OBJECT (ensures imports always use current client)
 // ============================================================
 
+// Safe no-op functions to prevent crashes when client is unavailable
+const noopAsync = async () => ({ data: null, error: new Error('Supabase client not initialized') })
+const noopSubscription = { unsubscribe: () => {} }
+const safeAuthFallback = {
+  getSession: noopAsync,
+  getUser: noopAsync,
+  refreshSession: noopAsync,
+  signInWithPassword: noopAsync,
+  signUp: noopAsync,
+  signOut: noopAsync,
+  onAuthStateChange: (callback) => ({ data: { subscription: noopSubscription } }),
+  updateUser: noopAsync,
+  resetPasswordForEmail: noopAsync,
+  setSession: noopAsync,
+  signInWithOAuth: noopAsync,
+}
+
 // This proxy ensures that after recreateClient(), all existing imports
 // still work because they reference this proxy, not the old client
 const supabaseProxy = {
-  // Property getters
-  get auth() { return currentClient?.auth },
+  // Property getters - return safe fallbacks when client is null
+  get auth() { return currentClient?.auth || safeAuthFallback },
   get storage() { return currentClient?.storage },
   get functions() { return currentClient?.functions },
   get realtime() { return currentClient?.realtime },
