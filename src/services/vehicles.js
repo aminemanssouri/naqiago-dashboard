@@ -29,9 +29,9 @@ export async function getCarBrands() {
     }
 
     const data = await response.json()
-     return data
+    return data
   } catch (error) {
-     throw error
+    throw error
   }
 }
 
@@ -56,7 +56,7 @@ export async function getCarModels(brandId) {
     }
 
     const data = await response.json()
-     return data
+    return data
   } catch (error) {
     console.error('Error fetching car models:', error)
     throw error
@@ -70,14 +70,14 @@ export async function getCarModels(brandId) {
  */
 export function getCarBrandLogoUrl(logoPath) {
   if (!logoPath) return null
-  
+
   // If it's already a full URL, return as is
   if (logoPath.startsWith('http')) {
     return logoPath
   }
-  
-  // Construct full URL
-  return `https://naqiago.com/${logoPath}`
+
+  // Construct full URL (Laravel stores public files under /storage/)
+  return `https://naqiago.com/storage/${logoPath}`
 }
 
 /**
@@ -89,8 +89,8 @@ export function getCarModelImageUrl(imagePath) {
   if (!imagePath) return null
   // If it's already a full URL, return it
   if (imagePath.startsWith('http')) return imagePath
-  // Otherwise, construct the full URL
-  return `https://naqiago.com/${imagePath}`
+  // Otherwise, construct the full URL (Laravel stores public files under /storage/)
+  return `https://naqiago.com/storage/${imagePath}`
 }
 
 /**
@@ -101,9 +101,9 @@ export function getCarModelImageUrl(imagePath) {
  */
 export function searchCarBrands(brands, searchTerm) {
   if (!searchTerm || !brands) return brands
-  
+
   const term = searchTerm.toLowerCase().trim()
-  return brands.filter(brand => 
+  return brands.filter(brand =>
     brand.car_brand_name.toLowerCase().includes(term)
   )
 }
@@ -116,9 +116,9 @@ export function searchCarBrands(brands, searchTerm) {
  */
 export function searchCarModels(models, searchTerm) {
   if (!searchTerm || !models) return models
-  
+
   const term = searchTerm.toLowerCase().trim()
-  return models.filter(model => 
+  return models.filter(model =>
     (model.car_model_name || '').toLowerCase().includes(term)
   )
 }
@@ -131,11 +131,11 @@ export async function getPopularCarBrands() {
   try {
     const allBrands = await getCarBrands()
     const popularBrandNames = ['TOYOTA', 'HONDA', 'FORD', 'BMW', 'MERCEDES', 'AUDI', 'VOLKSWAGEN', 'NISSAN']
-    
-    const popularBrands = allBrands.filter(brand => 
+
+    const popularBrands = allBrands.filter(brand =>
       popularBrandNames.includes(brand.car_brand_name.toUpperCase())
     )
-    
+
     return popularBrands
   } catch (error) {
     console.error('Error getting popular brands:', error)

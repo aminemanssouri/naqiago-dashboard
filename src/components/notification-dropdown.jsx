@@ -24,6 +24,7 @@ import {
   subscribeToNotifications,
   unsubscribeFromNotifications
 } from '@/services/notifications'
+import { supabase } from '@/services/supabaseClient'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function NotificationDropdown() {
@@ -40,7 +41,7 @@ export function NotificationDropdown() {
       setIsLoading(true)
       const result = await getNotifications({ limit: 10 })
       setNotifications(result.data)
-      
+
       const count = await getUnreadCount()
       setUnreadCount(count)
     } catch (error) {
@@ -87,13 +88,13 @@ export function NotificationDropdown() {
     try {
       await deleteNotification(notificationId)
       setNotifications(prev => prev.filter(n => n.id !== notificationId))
-      
+
       // Update unread count if it was unread
       const notification = notifications.find(n => n.id === notificationId)
       if (notification && !notification.is_read) {
         setUnreadCount(prev => Math.max(0, prev - 1))
       }
-      
+
       toast.success('Notification deleted')
     } catch (error) {
       console.error('Error deleting notification:', error)
@@ -122,23 +123,87 @@ export function NotificationDropdown() {
     setIsOpen(false)
   }
 
-  // Subscribe to real-time notifications
+  // Subscribe to real-time notifications + incoming worker messages
   useEffect(() => {
     if (user?.id) {
       fetchNotifications()
 
-      const subscription = subscribeToNotifications(user.id, (newNotification) => {
+      // 1. Subscribe to notifications table
+      const notifSubscription = subscribeToNotifications(user.id, (newNotification) => {
         setNotifications(prev => [newNotification, ...prev].slice(0, 10))
         setUnreadCount(prev => prev + 1)
-        
-        // Show toast for new notification
+
         toast.info(newNotification.title, {
           description: newNotification.message
         })
       })
 
+      // 2. Subscribe to incoming worker messages in admin chat
+      const msgSubscription = supabase
+        .channel('admin-message-notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'admin_messages',
+            filter: 'sender_role=eq.worker'
+          },
+          async (payload) => {
+            const msg = payload.new
+
+            // Fetch conversation to get worker name
+            let workerName = 'A worker'
+            try {
+              const { data: conv } = await supabase
+                .from('admin_conversations')
+                .select(`
+                  subject,
+                  worker:worker_profiles!admin_conversations_worker_id_fkey (
+                    business_name,
+                    user:profiles!worker_profiles_user_id_fkey ( full_name )
+                  )
+                `)
+                .eq('id', msg.conversation_id)
+                .single()
+
+              if (conv?.worker) {
+                workerName = conv.worker.business_name || conv.worker.user?.full_name || 'A worker'
+              }
+            } catch (e) {
+              // Fallback to generic name
+            }
+
+            const preview = msg.content?.substring(0, 60) || 'New message'
+
+            // Add as a virtual notification in the bell
+            const virtualNotification = {
+              id: `msg-${msg.id}`,
+              type: 'message',
+              title: `New message from ${workerName}`,
+              message: preview,
+              action_url: '/dashboard/messages',
+              is_read: false,
+              created_at: msg.created_at || new Date().toISOString()
+            }
+
+            setNotifications(prev => [virtualNotification, ...prev].slice(0, 10))
+            setUnreadCount(prev => prev + 1)
+
+            toast.info(`💬 ${workerName}`, {
+              description: preview,
+              action: {
+                label: 'View',
+                onClick: () => router.push('/dashboard/messages')
+              }
+            })
+          }
+        )
+        .subscribe()
+
       return () => {
-        unsubscribeFromNotifications(subscription)
+        unsubscribeFromNotifications(notifSubscription)
+        msgSubscription.unsubscribe()
       }
     }
   }, [user])
@@ -181,8 +246,8 @@ export function NotificationDropdown() {
         <Button variant="ghost" size="sm" className="h-8 w-8 px-0 relative">
           <Bell className="h-[1.1rem] w-[1.1rem]" />
           {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
+            <Badge
+              variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
             >
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -206,7 +271,7 @@ export function NotificationDropdown() {
           )}
         </div>
         <DropdownMenuSeparator />
-        
+
         {isLoading ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             Loading notifications...
@@ -220,15 +285,14 @@ export function NotificationDropdown() {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`relative flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
-                  !notification.is_read ? "bg-muted/30" : ""
-                }`}
+                className={`relative flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer ${!notification.is_read ? "bg-muted/30" : ""
+                  }`}
                 onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex-shrink-0 mt-1">
                   <span className="text-lg">{getNotificationIcon(notification.type)}</span>
                 </div>
-                
+
                 <div className="flex-1 space-y-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium leading-none truncate">
@@ -266,7 +330,7 @@ export function NotificationDropdown() {
             ))}
           </ScrollArea>
         )}
-        
+
         <DropdownMenuSeparator />
         <div className="p-2">
           <Button variant="ghost" className="w-full justify-center text-sm" onClick={handleViewAll}>
