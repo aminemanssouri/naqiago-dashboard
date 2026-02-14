@@ -27,8 +27,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { 
-  User, Mail, Phone, MapPin, Calendar, Clock, Shield, 
+import {
+  User, Mail, Phone, MapPin, Calendar, Clock, Shield,
   Car, DollarSign, Save, Loader2, AlertCircle, CheckCircle,
   Package, Wrench, CreditCard, FileText, X, Plus,
   CalendarIcon,
@@ -78,9 +78,9 @@ const PAYMENT_STATUS = [
   { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800', icon: '🚫' }
 ]
 
-export function BookingForm({ 
-  booking = null, 
-  onSubmit, 
+export function BookingForm({
+  booking = null,
+  onSubmit,
   onCancel,
   customers = [],
   workers = [],
@@ -90,7 +90,7 @@ export function BookingForm({
   mode = 'create' // 'create' or 'edit'
 }) {
   const { profile, isAdmin, isWorker } = useAuth()
-  
+
   // Form state - Ensure all fields have default values
   const [formData, setFormData] = useState({
     // Basic booking info
@@ -99,17 +99,17 @@ export function BookingForm({
     worker_id: '',
     service_id: '',
     status: 'pending',
-    
+
     // Schedule - ACTUAL database fields
     scheduled_date: '',
     scheduled_time: '',
     estimated_duration: 60,
-    
+
     // Address - ACTUAL database fields
     service_address_id: '',
     service_location: null, // USER-DEFINED type (point/geometry)
     service_address_text: '',
-    
+
     // Vehicle info - ACTUAL database fields
     vehicle_type: '',
     vehicle_make: '',
@@ -117,22 +117,22 @@ export function BookingForm({
     vehicle_year: '',
     vehicle_color: '',
     license_plate: '',
-    
+
     // Pricing - ACTUAL database fields
     base_price: 0,
     additional_charges: 0,
     discount_amount: 0,
-    
+
     // Notes - ACTUAL database fields
     special_instructions: '',
     customer_notes: '',
     worker_notes: '',
-    
+
     // Booking control - ACTUAL database fields
     can_cancel: true,
     can_reschedule: true,
     can_rate: false,
-    
+
     // Payment information (for creating payment record, NOT saved to bookings table)
     payment_method: 'cash',
     payment_status: 'pending',
@@ -159,7 +159,7 @@ export function BookingForm({
   const [selectedService, setSelectedService] = useState(null)
   const [selectedVehicle, setSelectedVehicle] = useState(null)
   const [calculatedPrice, setCalculatedPrice] = useState(0)
-  
+
   // Car brands and models state
   const [carBrands, setCarBrands] = useState([])
   const [carModels, setCarModels] = useState([])
@@ -205,14 +205,14 @@ export function BookingForm({
         // Payment info from payment record (if exists)
         payment_method: booking.payment?.payment_method || 'cash',
         payment_status: booking.payment?.status || 'pending',
-        platform_fee_percentage: booking.payment?.platform_fee && booking.total_price ? 
+        platform_fee_percentage: booking.payment?.platform_fee && booking.total_price ?
           ((booking.payment.platform_fee / booking.total_price) * 100).toFixed(1) : 15,
         platform_fee: booking.payment?.platform_fee || 0,
         worker_earnings: booking.payment?.worker_earnings || 0
       })
-      
-     
-      
+
+
+
       // Set the selected brand ID if vehicle_make exists
       if (booking.vehicle_make && carBrands.length > 0) {
         const brand = carBrands.find(b => b.car_brand_name === booking.vehicle_make)
@@ -220,7 +220,7 @@ export function BookingForm({
           setSelectedBrandId(brand.id)
         }
       }
-      
+
       // Clear validation errors and touched fields when loading edit mode
       setErrors({})
       setTouchedFields({})
@@ -239,7 +239,7 @@ export function BookingForm({
           worker_id: profile.id
         }))
       }
-      
+
       // Clear touched fields for create mode
       setTouchedFields({})
     }
@@ -250,7 +250,7 @@ export function BookingForm({
     const fetchBrands = async () => {
       setLoadingBrands(true)
       setBrandsError(null)
-      
+
       try {
         const brands = await getCarBrands()
         setCarBrands(brands)
@@ -261,7 +261,7 @@ export function BookingForm({
         setLoadingBrands(false)
       }
     }
-    
+
     fetchBrands()
   }, [])
 
@@ -272,10 +272,10 @@ export function BookingForm({
         setCarModels([])
         return
       }
-      
+
       setLoadingModels(true)
       setModelsError(null)
-      
+
       try {
         const models = await getCarModels(selectedBrandId)
         setCarModels(models)
@@ -287,7 +287,7 @@ export function BookingForm({
         setLoadingModels(false)
       }
     }
-    
+
     fetchModels()
   }, [selectedBrandId])
 
@@ -297,7 +297,7 @@ export function BookingForm({
       const basePrice = selectedService.base_price || 0
       const multiplier = selectedVehicle.multiplier || 1
       const calculatedBase = basePrice * multiplier
-      
+
       setCalculatedPrice(calculatedBase)
       setFormData(prev => ({
         ...prev,
@@ -309,7 +309,7 @@ export function BookingForm({
   // Validation function using refs
   const validateField = (fieldName, value, forceValidation = false) => {
     const ref = validationRefs.current[fieldName]
-    
+
     let isValid = true
     let errorMessage = ''
 
@@ -376,7 +376,7 @@ export function BookingForm({
   const handleChange = (fieldName, value) => {
     // Ensure value is never undefined
     const safeValue = value !== undefined ? value : ''
-    
+
     setFormData(prev => ({
       ...prev,
       [fieldName]: safeValue
@@ -414,10 +414,10 @@ export function BookingForm({
   }
 
   // Calculate pricing breakdown
-  const totalPrice = parseFloat(formData.base_price || 0) + 
-                    parseFloat(formData.additional_charges || 0) - 
-                    parseFloat(formData.discount_amount || 0)
-                    
+  const totalPrice = parseFloat(formData.base_price || 0) +
+    parseFloat(formData.additional_charges || 0) -
+    parseFloat(formData.discount_amount || 0)
+
   const platformFee = (totalPrice * parseFloat(formData.platform_fee_percentage || 15)) / 100
   const workerEarnings = totalPrice - platformFee
 
@@ -425,7 +425,7 @@ export function BookingForm({
   useEffect(() => {
     const newPlatformFee = (totalPrice * parseFloat(formData.platform_fee_percentage || 15)) / 100
     const newWorkerEarnings = totalPrice - newPlatformFee
-    
+
     setFormData(prev => ({
       ...prev,
       platform_fee: newPlatformFee,
@@ -436,12 +436,12 @@ export function BookingForm({
   // Validate entire form (force validation for all fields)
   const validateForm = () => {
     const requiredFields = ['customer_id', 'service_id', 'scheduled_date', 'scheduled_time', 'service_address_text', 'vehicle_type', 'base_price']
-    
+
     // Add worker_id as required for admins
     if (isAdmin) {
       requiredFields.push('worker_id')
     }
-    
+
     let isFormValid = true
 
     // Mark all required fields as touched to show validation
@@ -467,16 +467,16 @@ export function BookingForm({
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    
-    
+
+
+
     if (!validateForm()) {
       toast.error('Form validation failed')
       return
     }
 
     setIsSubmitting(true)
-    
+
     try {
       const submitData = {
         ...formData,
@@ -488,18 +488,18 @@ export function BookingForm({
         discount_amount: parseFloat(formData.discount_amount || 0)
       }
 
-      
+
       const submitStartTime = Date.now()
-      
+
       await onSubmit(submitData)
-      
+
       const submitEndTime = Date.now()
- 
+
       toast.success('Form submission successful')
     } catch (error) {
       toast.error('Form submission error')
     } finally {
-       setIsSubmitting(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -528,7 +528,7 @@ export function BookingForm({
               {mode === 'edit' ? 'Edit Booking' : 'Create New Booking'}
             </CardTitle>
             <CardDescription>
-              {mode === 'edit' 
+              {mode === 'edit'
                 ? `Update booking details for ${booking?.booking_number}`
                 : 'Fill in the details to create a new booking'
               }
@@ -559,7 +559,7 @@ export function BookingForm({
                 onValueChange={(value) => handleChange('customer_id', value)}
                 disabled={!isAdmin && mode === 'edit'}
               >
-                <SelectTrigger 
+                <SelectTrigger
                   ref={el => validationRefs.current.customer_id = el}
                   className="w-full"
                 >
@@ -591,7 +591,7 @@ export function BookingForm({
                 onValueChange={(value) => handleChange('worker_id', value)}
                 disabled={isWorker && !isAdmin}
               >
-                <SelectTrigger 
+                <SelectTrigger
                   ref={el => validationRefs.current.worker_id = el}
                   className="w-full"
                 >
@@ -600,7 +600,7 @@ export function BookingForm({
                 <SelectContent>
                   {workers.map((worker) => (
                     <SelectItem key={worker.id} value={worker.id}>
-                      {worker.business_name || worker.user?.full_name} 
+                      {worker.user?.full_name || worker.business_name}
                       {worker.hourly_rate && ` - ${worker.hourly_rate} MAD/hr`}
                     </SelectItem>
                   ))}
@@ -626,7 +626,7 @@ export function BookingForm({
                 value={formData.service_id}
                 onValueChange={(value) => handleChange('service_id', value)}
               >
-                <SelectTrigger 
+                <SelectTrigger
                   ref={el => validationRefs.current.service_id = el}
                   className="w-full"
                 >
@@ -711,7 +711,7 @@ export function BookingForm({
               <MapPinIcon className="h-5 w-5" />
               Service Address
             </h3>
-            
+
             {addresses.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="service_address_id">Saved Addresses</Label>
@@ -759,7 +759,7 @@ export function BookingForm({
               <CarIcon className="h-5 w-5" />
               Vehicle Information
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="vehicle_type">Vehicle Type *</Label>
@@ -822,8 +822,8 @@ export function BookingForm({
                         <SelectItem key={brand.id} value={brand.car_brand_name}>
                           <div className="flex items-center gap-2">
                             {brand.car_brand_image && (
-                              <img 
-                                src={getCarBrandLogoUrl(brand.car_brand_image)} 
+                              <img
+                                src={getCarBrandLogoUrl(brand.car_brand_image)}
                                 alt={brand.car_brand_name}
                                 className="w-5 h-5 object-contain"
                               />
@@ -850,11 +850,11 @@ export function BookingForm({
                 >
                   <SelectTrigger id="vehicle_model">
                     <SelectValue placeholder={
-                      !selectedBrandId 
-                        ? "Select make first" 
-                        : loadingModels 
-                        ? "Loading models..." 
-                        : "Select model"
+                      !selectedBrandId
+                        ? "Select make first"
+                        : loadingModels
+                          ? "Loading models..."
+                          : "Select model"
                     } />
                   </SelectTrigger>
                   <SelectContent>
@@ -862,8 +862,8 @@ export function BookingForm({
                       carModels
                         .sort((a, b) => a.model_name.localeCompare(b.model_name))
                         .map((model, index) => (
-                          <SelectItem 
-                            key={`${model.id}-${model.model_name}-${index}`} 
+                          <SelectItem
+                            key={`${model.id}-${model.model_name}-${index}`}
                             value={model.model_name}
                           >
                             <div className="flex items-center gap-2">
@@ -924,7 +924,7 @@ export function BookingForm({
               <CreditCardIcon className="h-5 w-5" />
               Pricing
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="base_price">Base Price (MAD) *</Label>
@@ -980,7 +980,7 @@ export function BookingForm({
               <CreditCardIcon className="h-5 w-5" />
               Payment Details
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Payment Method */}
               <div className="space-y-2">
@@ -996,10 +996,10 @@ export function BookingForm({
                     {PAYMENT_METHODS.map((method) => (
                       <SelectItem key={method.value} value={method.value}>
                         <div className="flex items-center gap-2">
-                           
+
                           <div>
                             <div className="font-medium">{method.label}</div>
-                             
+
                           </div>
                         </div>
                       </SelectItem>
@@ -1056,7 +1056,7 @@ export function BookingForm({
             {/* Payment Breakdown */}
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg space-y-3">
               <h4 className="font-semibold text-blue-800 dark:text-blue-200">Payment Breakdown</h4>
-              
+
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-2">
                   <div className="flex justify-between">
@@ -1068,7 +1068,7 @@ export function BookingForm({
                     <span className="font-medium">-{platformFee.toFixed(2)} MAD</span>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2 border-l pl-4">
                   <div className="flex justify-between text-green-600">
                     <span>Worker Earnings:</span>
@@ -1085,7 +1085,7 @@ export function BookingForm({
               {formData.payment_method && (
                 <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
                   <div className="flex items-center gap-2">
-                    
+
                     <div>
                       <div className="font-medium">
                         {PAYMENT_METHODS.find(m => m.value === formData.payment_method)?.label}
@@ -1105,7 +1105,7 @@ export function BookingForm({
           {/* Notes */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Notes & Instructions</h3>
-            
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="special_instructions">Special Instructions</Label>
@@ -1183,7 +1183,7 @@ export function BookingForm({
                 </>
               )}
             </Button>
-            
+
             <Button
               type="button"
               variant="outline"

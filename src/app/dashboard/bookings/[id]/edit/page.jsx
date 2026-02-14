@@ -16,7 +16,7 @@ export default function EditBookingPage() {
   const params = useParams()
   const { profile } = useAuth()
   const bookingId = params.id
-  
+
   // Form data
   const [formData, setFormData] = useState({
     customers: [],
@@ -24,10 +24,10 @@ export default function EditBookingPage() {
     services: [],
     addresses: []
   })
-  
+
   // Booking data
   const [booking, setBooking] = useState(null)
-  
+
   // Loading states
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -38,16 +38,16 @@ export default function EditBookingPage() {
     const loadData = async () => {
       try {
         setIsLoadingData(true)
-        
+
         // Load form data and booking in parallel
         const [formDataResult, bookingResult] = await Promise.all([
           getBookingFormData(profile?.id, profile?.role),
           getBooking(bookingId)
         ])
-        
+
         setFormData(formDataResult)
         setBooking(bookingResult)
-        
+
       } catch (error) {
         console.error('Error loading data:', error)
         setAlert({
@@ -71,16 +71,13 @@ export default function EditBookingPage() {
       setAlert(null)
 
       const result = await updateBooking(bookingId, bookingData)
-      
+
       setAlert({
         type: 'success',
         message: `Booking ${result.booking_number} updated successfully!`
       })
 
-      // Redirect to booking details after 2 seconds
-      setTimeout(() => {
-        router.push(`/dashboard/bookings/${bookingId}`)
-      }, 2000)
+      // Stay on the edit page - no redirect
 
     } catch (error) {
       console.error('Error updating booking:', error)
@@ -136,7 +133,7 @@ export default function EditBookingPage() {
           { label: "Bookings", href: "/dashboard/bookings" },
           { label: "Edit" },
           { label: booking.booking_number },
-          
+
         ]}
       >
         {/* Alert Messages */}

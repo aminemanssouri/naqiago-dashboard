@@ -6,10 +6,10 @@ import { supabase } from './supabaseClient'
  */
 export const getConversations = async (options = {}) => {
   try {
-    const { 
-      status = 'open',
+    const {
+      status = '',
       search = '',
-      page = 1, 
+      page = 1,
       limit = 20
     } = options
 
@@ -27,17 +27,12 @@ export const getConversations = async (options = {}) => {
             avatar_url,
             phone
           )
-        ),
-        last_message:admin_messages!admin_messages_conversation_id_fkey (
-          content,
-          created_at,
-          is_read
         )
       `, { count: 'exact' })
-      
+
     // Apply status filter if provided
     if (status) query = query.eq('status', status)
-    
+
     // Sort by last message (most recent first)
     query = query.order('last_message_at', { ascending: false })
 
@@ -54,16 +49,16 @@ export const getConversations = async (options = {}) => {
     let filteredData = data
     if (search) {
       const lowerSearch = search.toLowerCase()
-      filteredData = data.filter(conv => 
+      filteredData = data.filter(conv =>
         conv.worker?.business_name?.toLowerCase().includes(lowerSearch) ||
         conv.worker?.user?.full_name?.toLowerCase().includes(lowerSearch) ||
         conv.subject?.toLowerCase().includes(lowerSearch)
       )
     }
 
-    return { 
-      data: filteredData, 
-      count 
+    return {
+      data: filteredData,
+      count
     }
   } catch (error) {
     console.error('Error fetching conversations:', error)
@@ -100,7 +95,7 @@ export const getMessages = async (conversationId) => {
 }
 
 /**
- * Send a message
+ * Send a message and update unread counts
  * @param {Object} messageData 
  */
 export const sendMessage = async ({ conversationId, senderId, content, senderRole = 'admin' }) => {
@@ -121,16 +116,30 @@ export const sendMessage = async ({ conversationId, senderId, content, senderRol
 
     if (messageError) throw messageError
 
-    // 2. Update the conversation (last_message_at, unread counts)
+    // 2. Get current conversation to increment unread count
+    const { data: currentConv, error: fetchError } = await supabase
+      .from('admin_conversations')
+      .select('worker_unread_count, admin_unread_count')
+      .eq('id', conversationId)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    // 3. Update conversation: bump timestamp + increment unread for the OTHER party
     const updateData = {
       last_message_at: new Date().toISOString(),
-      last_message_preview: content?.substring(0, 50) || 'Attachment'
+      last_message_preview: content?.substring(0, 50) || 'Attachment',
+      updated_at: new Date().toISOString()
     }
 
-    // Increment unread count for the OTHER party
-    // Since we don't have atomic increment in simple update, typically we'd use an RPC
-    // For now, we'll just update the timestamp to bump it to top of list
-    
+    if (senderRole === 'admin') {
+      // Admin sent → increment worker's unread
+      updateData.worker_unread_count = (currentConv.worker_unread_count || 0) + 1
+    } else {
+      // Worker sent → increment admin's unread
+      updateData.admin_unread_count = (currentConv.admin_unread_count || 0) + 1
+    }
+
     const { error: convoError } = await supabase
       .from('admin_conversations')
       .update(updateData)
@@ -146,27 +155,83 @@ export const sendMessage = async ({ conversationId, senderId, content, senderRol
 }
 
 /**
- * Create a new conversation with a worker
+ * Mark a conversation as read for the admin
+ * Resets admin_unread_count to 0 and marks all unread messages as read
+ */
+export const markConversationAsRead = async (conversationId) => {
+  try {
+    // 1. Reset admin unread count
+    const { error: convoError } = await supabase
+      .from('admin_conversations')
+      .update({ admin_unread_count: 0 })
+      .eq('id', conversationId)
+
+    if (convoError) throw convoError
+
+    // 2. Mark all unread messages from workers as read
+    const { error: msgError } = await supabase
+      .from('admin_messages')
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString()
+      })
+      .eq('conversation_id', conversationId)
+      .eq('sender_role', 'worker')
+      .eq('is_read', false)
+
+    if (msgError) throw msgError
+  } catch (error) {
+    console.error('Error marking conversation as read:', error)
+    // Don't throw — this is a non-critical background update
+  }
+}
+
+/**
+ * Create a new conversation with a worker (via API route to bypass RLS)
  */
 export const createConversation = async ({ workerId, adminId, subject, category = 'support' }) => {
   try {
-    const { data, error } = await supabase
-      .from('admin_conversations')
-      .insert({
-        worker_id: workerId,
-        admin_id: adminId,
-        subject,
-        category,
-        status: 'open',
-        last_message_at: new Date().toISOString()
-      })
-      .select()
-      .single()
+    const response = await fetch('/api/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workerId, adminId, subject, category })
+    })
 
-    if (error) throw error
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to create conversation')
+    }
+
     return data
   } catch (error) {
     console.error('Error creating conversation:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch workers list for the "New Conversation" dialog
+ */
+export const getWorkersForChat = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('worker_profiles')
+      .select(`
+        id,
+        business_name,
+        status,
+        user:profiles!worker_profiles_user_id_fkey (
+          full_name,
+          avatar_url
+        )
+      `)
+      .order('business_name', { ascending: true })
+
+    if (error) throw error
+    return data || []
+  } catch (error) {
+    console.error('Error fetching workers for chat:', error)
     throw error
   }
 }

@@ -291,11 +291,15 @@ export default function WorkerTable({
                 </DropdownMenuItem>
               </Link>
 
-
               {/* Status Change Options */}
-
-
-
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDelete?.(worker)}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )

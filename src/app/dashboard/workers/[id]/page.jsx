@@ -200,22 +200,6 @@ export default function WorkerDetailPage() {
           { label: "Workers", href: "/dashboard/workers" },
           { label: "Details" },
         ]}
-        actions={
-          <div className="flex gap-2">
-            <Link href={`/dashboard/workers/${workerId}/edit`}>
-              <Button size="sm">
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Profile
-              </Button>
-            </Link>
-            <Link href="/dashboard/workers">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Workers
-              </Button>
-            </Link>
-          </div>
-        }
       >
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Profile Card */}

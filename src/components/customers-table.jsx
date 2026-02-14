@@ -15,8 +15,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { ViewCustomerModal } from "@/components/ViewCustomerModal"
-import { Mail, Phone, Eye, Calendar, MoreHorizontal, ArrowUpDown, Edit, UserPlus, Columns3, BarChart3 } from "lucide-react"
+import { Mail, Phone, Eye, Calendar, MoreHorizontal, ArrowUpDown, Edit, UserPlus, Columns3, BarChart3, Trash2 } from "lucide-react"
+import { deleteCustomer } from "@/services/customers"
+import { toast } from "sonner"
 
 const customerColumns = [
   {
@@ -247,8 +259,10 @@ const customerColumns = [
   },
 ]
 
-export function CustomersTable({ customers = [], loading = false }) {
+export function CustomersTable({ customers = [], loading = false, onRefresh }) {
   const router = useRouter()
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const [columnVisibility, setColumnVisibility] = useState({
     email: true,
     phone: true,
@@ -266,9 +280,24 @@ export function CustomersTable({ customers = [], loading = false }) {
     router.push(`/dashboard/customers/${customerId}/analytics`)
   }
 
-  const handleDelete = (customerId) => {
-    // This will be handled by parent component or add delete logic here
-    console.log("Delete customer:", customerId)
+  const handleDeleteClick = (customer) => {
+    setDeleteTarget(customer)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    try {
+      setDeleting(true)
+      await deleteCustomer(deleteTarget.id)
+      toast.success(`Customer "${deleteTarget.full_name}" has been deactivated`)
+      setDeleteTarget(null)
+      if (onRefresh) onRefresh()
+    } catch (error) {
+      console.error('Error deleting customer:', error)
+      toast.error('Failed to delete customer: ' + (error.message || 'Unknown error'))
+    } finally {
+      setDeleting(false)
+    }
   }
 
   // Update the columns to use the handlers
@@ -310,9 +339,10 @@ export function CustomersTable({ customers = [], loading = false }) {
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => handleDelete(customer.id)}
+                  onClick={() => handleDeleteClick(customer)}
                   className="text-destructive"
                 >
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -333,9 +363,33 @@ export function CustomersTable({ customers = [], loading = false }) {
   })
 
   return (
-    <DataTable
-      data={customers}
-      columns={visibleColumns}
-    />
+    <>
+      <DataTable
+        data={customers}
+        columns={visibleColumns}
+      />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete customer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will deactivate <span className="font-semibold">{deleteTarget?.full_name}</span>.
+              Their account will be set to inactive. This action can be reversed by reactivating the customer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
