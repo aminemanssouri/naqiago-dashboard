@@ -48,9 +48,16 @@ import { getCarBrands, getCarModels, getCarBrandLogoUrl, getCarModelImageUrl } f
 import { useAuth } from '@/contexts/AuthContext'
 
 const VEHICLE_TYPES = [
-  { value: 'sedan', label: 'Sedan', multiplier: 1.0 },
-  { value: 'suv', label: 'SUV', multiplier: 1.2 },
-  { value: 'van', label: 'Van', multiplier: 1.4 },
+  // Categories from the vehicle API
+  { value: 'citadine', label: 'Citadine', multiplier: 1.0 },
+  { value: 'berline', label: 'Berline', multiplier: 1.1 },
+  { value: 'moyen_suv', label: 'Moyen SUV', multiplier: 1.3 },
+  { value: 'grand_suv', label: 'Grand SUV / 4x4', multiplier: 1.5 },
+  { value: 'utilitaire', label: 'Utilitaire / Van', multiplier: 1.6 },
+  // Standard fallback categories
+  { value: 'sedan', label: 'Sedan', multiplier: 1.1 },
+  { value: 'suv', label: 'SUV', multiplier: 1.3 },
+  { value: 'van', label: 'Van', multiplier: 1.5 },
   { value: 'truck', label: 'Truck', multiplier: 1.6 }
 ]
 
@@ -845,7 +852,14 @@ export function BookingForm({
                 <Label htmlFor="vehicle_model">Model</Label>
                 <Select
                   value={formData.vehicle_model}
-                  onValueChange={(value) => handleChange('vehicle_model', value)}
+                  onValueChange={(value) => {
+                    handleChange('vehicle_model', value)
+                    // Auto-select the vehicle type if available from the API response
+                    const selectedModel = carModels.find(m => m.model_name === value)
+                    if (selectedModel && selectedModel.type) {
+                      handleChange('vehicle_type', selectedModel.type)
+                    }
+                  }}
                   disabled={!selectedBrandId || loadingModels}
                 >
                   <SelectTrigger id="vehicle_model">
@@ -859,7 +873,7 @@ export function BookingForm({
                   </SelectTrigger>
                   <SelectContent>
                     {carModels.length > 0 ? (
-                      carModels
+                      Array.from(new Map(carModels.map(m => [m.model_name, m])).values())
                         .sort((a, b) => a.model_name.localeCompare(b.model_name))
                         .map((model, index) => (
                           <SelectItem
