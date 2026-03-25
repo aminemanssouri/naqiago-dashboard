@@ -157,13 +157,7 @@ export function ServiceForm({ service, mode = 'create' }) {
       newErrors.duration_minutes = 'Valid duration is required'
     }
 
-    // Validate multipliers
-    const multipliers = ['sedan_multiplier', 'suv_multiplier', 'van_multiplier', 'truck_multiplier']
-    multipliers.forEach(mult => {
-      if (formData[mult] && (isNaN(formData[mult]) || parseFloat(formData[mult]) < 0)) {
-        newErrors[mult] = 'Must be a valid positive number'
-      }
-    })
+    // Multipliers removed as they are determined dynamically by BookingForm based on global configuration.
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -485,6 +479,11 @@ export function ServiceForm({ service, mode = 'create' }) {
                         <SelectValue placeholder="Select car type (optional)" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="citadine">Citadine</SelectItem>
+                        <SelectItem value="berline">Berline</SelectItem>
+                        <SelectItem value="moyen_suv">Moyen SUV</SelectItem>
+                        <SelectItem value="grand_suv">Grand SUV / 4x4</SelectItem>
+                        <SelectItem value="utilitaire">Utilitaire / Van</SelectItem>
                         <SelectItem value="sedan">Sedan</SelectItem>
                         <SelectItem value="suv">SUV</SelectItem>
                         <SelectItem value="hatchback">Hatchback</SelectItem>
@@ -492,11 +491,7 @@ export function ServiceForm({ service, mode = 'create' }) {
                         <SelectItem value="truck">Truck</SelectItem>
                         <SelectItem value="motor plus 49 CC">Motor Plus 49 CC</SelectItem>
                         <SelectItem value="motor 49 CC">Motor 49 CC</SelectItem>
-                        <SelectItem value="Moyen SUV">Moyen SUV</SelectItem>
-                        <SelectItem value="Grand SUV">Grand SUV</SelectItem>
-                        <SelectItem value="Berline">Berline</SelectItem>
                         <SelectItem value="Motorcycles">Motorcycles</SelectItem>
-                        <SelectItem value="Citadine">Citadine</SelectItem>
                       </SelectContent>
                     </Select>
                     {errors.cartype && (
@@ -614,87 +609,11 @@ export function ServiceForm({ service, mode = 'create' }) {
 
                   <Separator />
 
-                  <div>
-                    <h3 className="text-sm font-medium mb-3">Vehicle Type Multipliers</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Adjust pricing based on vehicle type
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <h3 className="text-sm font-medium mb-1 text-blue-800 dark:text-blue-200">Vehicle Type Multipliers</h3>
+                    <p className="text-sm text-blue-600 dark:text-blue-300">
+                      Pricing multipliers for different vehicle types (like SUVs, Vans) are automatically calculated in the Booking Module using standard global rates.
                     </p>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="sedan_multiplier">Sedan Multiplier</Label>
-                        <Input
-                          id="sedan_multiplier"
-                          type="number"
-                          step="0.01"
-                          placeholder="1.00"
-                          value={formData.sedan_multiplier}
-                          onChange={(e) => handleChange('sedan_multiplier', e.target.value)}
-                          className={errors.sedan_multiplier ? 'border-red-500' : ''}
-                        />
-                        {errors.sedan_multiplier && (
-                          <p className="text-sm text-red-500">{errors.sedan_multiplier}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="suv_multiplier">SUV Multiplier</Label>
-                        <Input
-                          id="suv_multiplier"
-                          type="number"
-                          step="0.01"
-                          placeholder="1.20"
-                          value={formData.suv_multiplier}
-                          onChange={(e) => handleChange('suv_multiplier', e.target.value)}
-                          className={errors.suv_multiplier ? 'border-red-500' : ''}
-                        />
-                        {errors.suv_multiplier && (
-                          <p className="text-sm text-red-500">{errors.suv_multiplier}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="van_multiplier">Van Multiplier</Label>
-                        <Input
-                          id="van_multiplier"
-                          type="number"
-                          step="0.01"
-                          placeholder="1.40"
-                          value={formData.van_multiplier}
-                          onChange={(e) => handleChange('van_multiplier', e.target.value)}
-                          className={errors.van_multiplier ? 'border-red-500' : ''}
-                        />
-                        {errors.van_multiplier && (
-                          <p className="text-sm text-red-500">{errors.van_multiplier}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="truck_multiplier">Truck Multiplier</Label>
-                        <Input
-                          id="truck_multiplier"
-                          type="number"
-                          step="0.01"
-                          placeholder="1.60"
-                          value={formData.truck_multiplier}
-                          onChange={(e) => handleChange('truck_multiplier', e.target.value)}
-                          className={errors.truck_multiplier ? 'border-red-500' : ''}
-                        />
-                        {errors.truck_multiplier && (
-                          <p className="text-sm text-red-500">{errors.truck_multiplier}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 p-4 bg-muted rounded-lg">
-                      <h4 className="text-sm font-medium mb-2">Price Preview</h4>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>Sedan: <span className="font-medium">{(parseFloat(formData.base_price || 0) * parseFloat(formData.sedan_multiplier || 1)).toFixed(2)} MAD</span></div>
-                        <div>SUV: <span className="font-medium">{(parseFloat(formData.base_price || 0) * parseFloat(formData.suv_multiplier || 1)).toFixed(2)} MAD</span></div>
-                        <div>Van: <span className="font-medium">{(parseFloat(formData.base_price || 0) * parseFloat(formData.van_multiplier || 1)).toFixed(2)} MAD</span></div>
-                        <div>Truck: <span className="font-medium">{(parseFloat(formData.base_price || 0) * parseFloat(formData.truck_multiplier || 1)).toFixed(2)} MAD</span></div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </TabsContent>
