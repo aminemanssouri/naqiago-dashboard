@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import {
-  Loader2, Plus, Calendar, MapPin, User, DollarSign, Clock,
+  Loader2, Plus, Calendar, MapPin, User, DollarSign, Clock, Phone,
   Edit, Trash2, Search, Filter, X, ChevronDown, CalendarDays,
   CheckCircle, XCircle, AlertCircle, Timer, ArrowUpDown, Eye, Download
 } from 'lucide-react'
@@ -500,9 +500,17 @@ export default function BookingsListPage() {
 
                     {/* Customer */}
                     {booking.customer && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <User className="mr-2 h-4 w-4 flex-shrink-0" />
-                        {booking.customer.full_name || booking.customer.email}
+                      <div className="space-y-1">
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <User className="mr-2 h-4 w-4 flex-shrink-0" />
+                          {booking.customer.full_name || booking.customer.email}
+                        </div>
+                        {booking.customer.phone && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                            {booking.customer.phone}
+                          </div>
+                        )}
                       </div>
                     )}
 
