@@ -64,6 +64,21 @@ export function ServiceForm({ service, mode = 'create' }) {
   // Form validation errors
   const [errors, setErrors] = useState({})
   
+  // Auto-calculated price based on vehicle type multiplier
+  const getMultiplier = (type) => {
+    if (!type) return 1.00;
+    const t = type.toLowerCase();
+    if (t.includes('suv') || t.includes('4x4')) return parseFloat(formData.suv_multiplier) || 1.20;
+    if (t.includes('van') || t.includes('utilitaire')) return parseFloat(formData.van_multiplier) || 1.40;
+    if (t.includes('truck')) return parseFloat(formData.truck_multiplier) || 1.60;
+    return parseFloat(formData.sedan_multiplier) || 1.00;
+  };
+  
+  const calculatedPrice = (() => {
+    const base = parseFloat(formData.base_price) || 0;
+    return base > 0 ? (base * getMultiplier(formData.cartype)).toFixed(2) : '';
+  })();
+  
   // New inclusion input
   const [newInclusion, setNewInclusion] = useState('')
   
@@ -190,7 +205,7 @@ export function ServiceForm({ service, mode = 'create' }) {
         suv_multiplier: parseFloat(formData.suv_multiplier) || 1.20,
         van_multiplier: parseFloat(formData.van_multiplier) || 1.40,
         truck_multiplier: parseFloat(formData.truck_multiplier) || 1.60,
-        price: formData.price ? parseFloat(formData.price) : parseFloat(formData.base_price),
+        price: parseFloat(calculatedPrice) || parseFloat(formData.base_price) || 0,
         image_url: formData.image_url || null,
         notes: formData.notes || null,
         inclusions: formData.inclusions || [],
@@ -592,17 +607,18 @@ export function ServiceForm({ service, mode = 'create' }) {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="price">Display Price (MAD)</Label>
+                      <Label htmlFor="price">Computed Price (MAD)</Label>
                       <Input
                         id="price"
                         type="number"
                         step="0.01"
-                        placeholder="Same as base price"
-                        value={formData.price}
-                        onChange={(e) => handleChange('price', e.target.value)}
+                        placeholder="0.00"
+                        value={calculatedPrice}
+                        disabled
+                        className="bg-muted cursor-not-allowed"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Leave empty to use base price
+                        Auto-calculated: Base Price × Vehicle Multiplier
                       </p>
                     </div>
                   </div>

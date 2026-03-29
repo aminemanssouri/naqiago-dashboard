@@ -8,6 +8,7 @@ export const getServices = async (options = {}) => {
       limit = 10,
       search = '',
       category = '',
+      cartype = '',
       is_active = '',
       minPrice = null,
       maxPrice = null,
@@ -25,8 +26,13 @@ export const getServices = async (options = {}) => {
     }
 
     // Apply category filter
-    if (category) {
+    if (category && category !== 'all') {
       query = query.eq('category', category)
+    }
+
+    // Apply cartype filter
+    if (cartype && cartype !== 'all') {
+      query = query.eq('cartype', cartype)
     }
 
     // Apply active status filter (use is_active, not status)
