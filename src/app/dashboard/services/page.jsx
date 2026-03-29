@@ -27,6 +27,7 @@ export default function ServicesPage() {
   const [filters, setFilters] = useState({
     search: "",
     category: "",
+    cartype: "",
     status: "",
     featured: "",
     minPrice: "",
@@ -158,6 +159,7 @@ export default function ServicesPage() {
     profile?.id,
     filters.search,
     filters.category,
+    filters.cartype,
     filters.status,
     filters.featured,
     filters.minPrice,
@@ -246,6 +248,30 @@ export default function ServicesPage() {
               ]
             },
             {
+              key: 'cartype',
+              label: 'Car Type',
+              placeholder: 'All Car Types',
+              value: filters.cartype,
+              onChange: (value) => handleFilterChange('cartype', value),
+              width: 'w-[180px]',
+              options: [
+                { value: 'all', label: 'All Car Types' },
+                { value: 'citadine', label: 'Citadine' },
+                { value: 'berline', label: 'Berline' },
+                { value: 'moyen_suv', label: 'Moyen SUV' },
+                { value: 'grand_suv', label: 'Grand SUV / 4x4' },
+                { value: 'utilitaire', label: 'Utilitaire / Van' },
+                { value: 'sedan', label: 'Sedan' },
+                { value: 'suv', label: 'SUV' },
+                { value: 'hatchback', label: 'Hatchback' },
+                { value: 'van', label: 'Van' },
+                { value: 'truck', label: 'Truck' },
+                { value: 'motor plus 49 CC', label: 'Motor Plus 49 CC' },
+                { value: 'motor 49 CC', label: 'Motor 49 CC' },
+                { value: 'Motorcycles', label: 'Motorcycles' }
+              ]
+            },
+            {
               key: 'status',
               label: 'Status',
               placeholder: 'All Status',
@@ -267,6 +293,7 @@ export default function ServicesPage() {
               ...prev,
               search: '',
               category: '',
+              cartype: '',
               status: '',
               featured: '',
               minPrice: '',

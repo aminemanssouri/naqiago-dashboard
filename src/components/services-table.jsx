@@ -44,6 +44,29 @@ export function ServicesTable({ services = [], loading = false, onRefresh }) {
   const [serviceToDelete, setServiceToDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState({})
+  
+
+
+  const formatCarType = (type) => {
+    if (!type) return "N/A"
+    const map = {
+      'citadine': 'Citadine',
+      'berline': 'Berline',
+      'moyen_suv': 'Moyen SUV',
+      'grand_suv': 'Grand SUV / 4x4',
+      'utilitaire': 'Utilitaire / Van',
+      'sedan': 'Sedan',
+      'suv': 'SUV',
+      'hatchback': 'Hatchback',
+      'van': 'Van',
+      'truck': 'Truck',
+      'motor plus 49 CC': 'Motor Plus 49 CC',
+      'motor 49 CC': 'Motor 49 CC',
+      'Motorcycles': 'Motorcycles'
+    }
+    return map[type] || type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ')
+  }
+
 
   const handleDelete = async () => {
     if (!serviceToDelete) return
@@ -239,7 +262,7 @@ export function ServicesTable({ services = [], loading = false, onRefresh }) {
         return (
           <div className="hidden lg:block">
             {cartype ? (
-              <Badge variant="secondary">{cartype}</Badge>
+              <Badge variant="secondary">{formatCarType(cartype)}</Badge>
             ) : (
               <span className="text-muted-foreground text-sm">N/A</span>
             )}
