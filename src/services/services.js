@@ -215,11 +215,11 @@ export const updateService = async (id, updates) => {
   }
 }
 
-// Delete a service (soft delete by setting is_active to false)
+// Delete a service
 export const deleteService = async (id) => {
   try {
     console.log('🗑️ Deleting service with ID:', id)
-    
+
     // Get the service first to check for associated image
     const { data: service, error: fetchError } = await supabase
       .from('services')

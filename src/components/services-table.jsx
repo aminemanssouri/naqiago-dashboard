@@ -57,7 +57,7 @@ export function ServicesTable({ services = [], loading = false, onRefresh }) {
       if (onRefresh) onRefresh()
     } catch (error) {
       console.error('Error deleting service:', error)
-      toast.error('Failed to delete service')
+      toast.error(error.message || 'Failed to delete service', { duration: 5000 })
     } finally {
       setDeleteLoading(false)
     }
