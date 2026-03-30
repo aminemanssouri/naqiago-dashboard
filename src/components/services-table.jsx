@@ -25,6 +25,7 @@ import {
   ToggleRight
 } from "lucide-react"
 import { deleteService, toggleServiceStatus, duplicateService } from '@/services/services'
+import { getServiceDisplayPrice } from '@/utils/bookingUtils'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -200,21 +201,22 @@ export function ServicesTable({ services = [], loading = false, onRefresh }) {
       },
       size: 120,
       cell: ({ row }) => {
-        const price = row.getValue("base_price")
-        const discountPrice = row.original.discount_price
+        const service = row.original
+        const displayPrice = getServiceDisplayPrice(service)
+        const discountPrice = service.discount_price
         return (
           <div className="text-center font-medium">
             {discountPrice ? (
               <div className="space-y-1">
                 <div className="text-sm line-through text-muted-foreground">
-                  {price} MAD
+                  {displayPrice.toFixed(2)} MAD
                 </div>
                 <div className="text-green-600">
                   {discountPrice} MAD
                 </div>
               </div>
             ) : (
-              <div>{price} MAD</div>
+              <div>{displayPrice.toFixed(2)} MAD</div>
             )}
           </div>
         )

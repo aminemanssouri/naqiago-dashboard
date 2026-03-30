@@ -82,6 +82,28 @@ export const calculateBookingPrice = (basePrice, vehicleType, additionalCharges 
   return Math.max(0, total) // Ensure price is not negative
 }
 
+// Service row cartype → multiplier (matches ServiceForm / mobile; DB stores base only)
+export const getServiceCartypeMultiplier = (cartype, multipliers = {}) => {
+  const sedan = parseFloat(multipliers.sedan_multiplier) || 1.0
+  const suv = parseFloat(multipliers.suv_multiplier) || 1.2
+  const van = parseFloat(multipliers.van_multiplier) || 1.4
+  const truck = parseFloat(multipliers.truck_multiplier) || 1.6
+
+  if (!cartype) return 1
+  const t = String(cartype).toLowerCase()
+  if (t.includes('suv') || t.includes('4x4')) return suv
+  if (t.includes('van') || t.includes('utilitaire')) return van
+  if (t.includes('truck')) return truck
+  return sedan
+}
+
+export const getServiceDisplayPrice = (service) => {
+  if (!service) return 0
+  const base = parseFloat(service.base_price) || 0
+  const m = getServiceCartypeMultiplier(service.cartype, service)
+  return base * m
+}
+
 // Format booking data for display
 export const formatBookingForDisplay = (booking) => {
   if (!booking) return null

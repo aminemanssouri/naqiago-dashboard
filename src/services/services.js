@@ -148,7 +148,8 @@ export const createService = async (serviceData) => {
       suv_multiplier: parseFloat(serviceData.suv_multiplier) || 1.20,
       van_multiplier: parseFloat(serviceData.van_multiplier) || 1.40,
       truck_multiplier: parseFloat(serviceData.truck_multiplier) || 1.60,
-      price: serviceData.price ? parseFloat(serviceData.price) : parseFloat(serviceData.base_price),
+      // Always store base; consumers (e.g. mobile) multiply by vehicle type
+      price: parseFloat(serviceData.base_price),
       image_url: serviceData.image_url || null,
       notes: serviceData.notes || null,
       inclusions: serviceData.inclusions || [],
@@ -514,7 +515,7 @@ export const updateServicePricing = async (id, pricingData) => {
       .from('services')
       .update({
         base_price: pricingData.base_price,
-        price: pricingData.price || pricingData.base_price,
+        price: parseFloat(pricingData.base_price),
         sedan_multiplier: pricingData.sedan_multiplier || 1.00,
         suv_multiplier: pricingData.suv_multiplier || 1.20,
         van_multiplier: pricingData.van_multiplier || 1.40,

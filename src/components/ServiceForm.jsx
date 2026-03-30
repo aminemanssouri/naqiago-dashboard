@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { createService, updateService } from '@/services/services'
 import { supabase } from '@/services/supabaseClient'
+import { getServiceCartypeMultiplier } from '@/utils/bookingUtils'
 
 export function ServiceForm({ service, mode = 'create' }) {
   const router = useRouter()
@@ -64,15 +65,14 @@ export function ServiceForm({ service, mode = 'create' }) {
   // Form validation errors
   const [errors, setErrors] = useState({})
   
-  // Auto-calculated price based on vehicle type multiplier
-  const getMultiplier = (type) => {
-    if (!type) return 1.00;
-    const t = type.toLowerCase();
-    if (t.includes('suv') || t.includes('4x4')) return parseFloat(formData.suv_multiplier) || 1.20;
-    if (t.includes('van') || t.includes('utilitaire')) return parseFloat(formData.van_multiplier) || 1.40;
-    if (t.includes('truck')) return parseFloat(formData.truck_multiplier) || 1.60;
-    return parseFloat(formData.sedan_multiplier) || 1.00;
-  };
+  // Display-only: same multiplier logic the mobile app uses (not stored multiplied)
+  const getMultiplier = (type) =>
+    getServiceCartypeMultiplier(type, {
+      sedan_multiplier: formData.sedan_multiplier,
+      suv_multiplier: formData.suv_multiplier,
+      van_multiplier: formData.van_multiplier,
+      truck_multiplier: formData.truck_multiplier,
+    })
   
   const calculatedPrice = (() => {
     const base = parseFloat(formData.base_price) || 0;
@@ -205,7 +205,8 @@ export function ServiceForm({ service, mode = 'create' }) {
         suv_multiplier: parseFloat(formData.suv_multiplier) || 1.20,
         van_multiplier: parseFloat(formData.van_multiplier) || 1.40,
         truck_multiplier: parseFloat(formData.truck_multiplier) || 1.60,
-        price: parseFloat(calculatedPrice) || parseFloat(formData.base_price) || 0,
+        // Persist base only; mobile app applies cartype multiplier (same as Computed Price preview)
+        price: parseFloat(formData.base_price) || 0,
         image_url: formData.image_url || null,
         notes: formData.notes || null,
         inclusions: formData.inclusions || [],
