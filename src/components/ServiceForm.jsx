@@ -40,6 +40,47 @@ export function ServiceForm({ service, mode = 'create' }) {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imagePreview, setImagePreview] = useState(service?.image_url || '')
   
+  // Helper function to get multiplier based on cartype
+  const getMultiplierForCartype = (cartype) => {
+    if (!cartype) return 1.00
+    const type = String(cartype).toLowerCase()
+    
+    // Citadine and Berline use sedan multiplier (1.00)
+    if (type.includes('citadine') || type.includes('berline') || type.includes('sedan') || type.includes('hatchback')) {
+      return 1.00
+    }
+    // Moyen SUV uses suv multiplier (1.20)
+    if (type.includes('moyen') && type.includes('suv')) {
+      return 1.20
+    }
+    // Grand SUV uses van multiplier (1.40)
+    if (type.includes('grand') && type.includes('suv')) {
+      return 1.40
+    }
+    // Generic SUV/4x4 uses suv multiplier (1.20)
+    if (type.includes('suv') || type.includes('4x4')) {
+      return 1.20
+    }
+    // Utilitaire/Van uses van multiplier (1.40)
+    if (type.includes('van') || type.includes('utilitaire')) {
+      return 1.40
+    }
+    // Truck uses truck multiplier (1.60)
+    if (type.includes('truck')) {
+      return 1.60
+    }
+    // Default to sedan multiplier
+    return 1.00
+  }
+  
+  // Calculate display price from base_price when loading existing service
+  const getDisplayPrice = () => {
+    if (!service?.base_price) return ''
+    const basePrice = parseFloat(service.base_price)
+    const multiplier = getMultiplierForCartype(service.cartype)
+    return (basePrice * multiplier).toFixed(2)
+  }
+  
   // Form state - matching the database schema exactly
   const [formData, setFormData] = useState({
     key: service?.key || '',
@@ -47,7 +88,7 @@ export function ServiceForm({ service, mode = 'create' }) {
     description: service?.description || '',
     category: service?.category || '',
     cartype: service?.cartype || '',
-    base_price: service?.base_price || '',
+    price: getDisplayPrice() || service?.price || '',
     duration_minutes: service?.duration_minutes || '',
     icon_name: service?.icon_name || '',
     is_active: service?.is_active !== undefined ? service.is_active : true,
@@ -55,7 +96,6 @@ export function ServiceForm({ service, mode = 'create' }) {
     suv_multiplier: service?.suv_multiplier || 1.20,
     van_multiplier: service?.van_multiplier || 1.40,
     truck_multiplier: service?.truck_multiplier || 1.60,
-    price: service?.price || '',
     image_url: service?.image_url || '',
     notes: service?.notes || '',
     inclusions: service?.inclusions || [],
@@ -64,20 +104,6 @@ export function ServiceForm({ service, mode = 'create' }) {
 
   // Form validation errors
   const [errors, setErrors] = useState({})
-  
-  // Display-only: same multiplier logic the mobile app uses (not stored multiplied)
-  const getMultiplier = (type) =>
-    getServiceCartypeMultiplier(type, {
-      sedan_multiplier: formData.sedan_multiplier,
-      suv_multiplier: formData.suv_multiplier,
-      van_multiplier: formData.van_multiplier,
-      truck_multiplier: formData.truck_multiplier,
-    })
-  
-  const calculatedPrice = (() => {
-    const base = parseFloat(formData.base_price) || 0;
-    return base > 0 ? (base * getMultiplier(formData.cartype)).toFixed(2) : '';
-  })();
   
   // New inclusion input
   const [newInclusion, setNewInclusion] = useState('')
@@ -164,8 +190,8 @@ export function ServiceForm({ service, mode = 'create' }) {
       newErrors.category = 'Category is required'
     }
     
-    if (!formData.base_price || isNaN(formData.base_price) || parseFloat(formData.base_price) <= 0) {
-      newErrors.base_price = 'Valid base price is required'
+    if (!formData.price || isNaN(formData.price) || parseFloat(formData.price) <= 0) {
+      newErrors.price = 'Valid price is required'
     }
     
     if (!formData.duration_minutes || isNaN(formData.duration_minutes) || parseInt(formData.duration_minutes) <= 0) {
@@ -190,6 +216,11 @@ export function ServiceForm({ service, mode = 'create' }) {
     setLoading(true)
 
     try {
+      // Calculate base_price by dividing entered price by multiplier
+      const enteredPrice = parseFloat(formData.price)
+      const multiplier = getMultiplierForCartype(formData.cartype)
+      const calculatedBasePrice = enteredPrice / multiplier
+      
       // Prepare data for submission
       const submitData = {
         key: formData.key || formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, ''),
@@ -197,7 +228,7 @@ export function ServiceForm({ service, mode = 'create' }) {
         description: formData.description || null,
         category: formData.category,
         cartype: formData.cartype || null,
-        base_price: parseFloat(formData.base_price),
+        base_price: calculatedBasePrice,
         duration_minutes: parseInt(formData.duration_minutes),
         icon_name: formData.icon_name || null,
         is_active: formData.is_active,
@@ -205,8 +236,7 @@ export function ServiceForm({ service, mode = 'create' }) {
         suv_multiplier: parseFloat(formData.suv_multiplier) || 1.20,
         van_multiplier: parseFloat(formData.van_multiplier) || 1.40,
         truck_multiplier: parseFloat(formData.truck_multiplier) || 1.60,
-        // Persist base only; mobile app applies cartype multiplier (same as Computed Price preview)
-        price: parseFloat(formData.base_price) || 0,
+        price: calculatedBasePrice,
         image_url: formData.image_url || null,
         notes: formData.notes || null,
         inclusions: formData.inclusions || [],
@@ -584,52 +614,28 @@ export function ServiceForm({ service, mode = 'create' }) {
               {/* Pricing Tab */}
               <TabsContent value="pricing" className="space-y-4 mt-4">
                 <div className="grid gap-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="base_price">
-                        <DollarSign className="h-4 w-4 inline mr-1" />
-                        Base Price (MAD) <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="base_price"
-                        type="number"
-                        step="0.01"
-                        placeholder="100.00"
-                        value={formData.base_price}
-                        onChange={(e) => handleChange('base_price', e.target.value)}
-                        className={errors.base_price ? 'border-red-500' : ''}
-                      />
-                      {errors.base_price && (
-                        <p className="text-sm text-red-500 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {errors.base_price}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Computed Price (MAD)</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={calculatedPrice}
-                        disabled
-                        className="bg-muted cursor-not-allowed"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Auto-calculated: Base Price × Vehicle Multiplier
+                  <div className="space-y-2">
+                    <Label htmlFor="price">
+                      <DollarSign className="h-4 w-4 inline mr-1" />
+                      Service Price (MAD) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      placeholder="100.00"
+                      value={formData.price}
+                      onChange={(e) => handleChange('price', e.target.value)}
+                      className={errors.price ? 'border-red-500' : ''}
+                    />
+                    {errors.price && (
+                      <p className="text-sm text-red-500 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.price}
                       </p>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                    <h3 className="text-sm font-medium mb-1 text-blue-800 dark:text-blue-200">Vehicle Type Multipliers</h3>
-                    <p className="text-sm text-blue-600 dark:text-blue-300">
-                      Pricing multipliers for different vehicle types (like SUVs, Vans) are automatically calculated in the Booking Module using standard global rates.
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Enter the price for {formData.cartype || 'this service'}. Base price will be calculated as: {formData.price ? `${formData.price} ÷ ${getMultiplierForCartype(formData.cartype)} = ${(parseFloat(formData.price) / getMultiplierForCartype(formData.cartype)).toFixed(2)}` : 'Price ÷ Multiplier'} MAD
                     </p>
                   </div>
                 </div>

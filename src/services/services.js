@@ -30,9 +30,9 @@ export const getServices = async (options = {}) => {
       query = query.eq('category', category)
     }
 
-    // Apply cartype filter
+    // Apply cartype filter with exact case-insensitive match
     if (cartype && cartype !== 'all') {
-      query = query.eq('cartype', cartype)
+      query = query.ilike('cartype', cartype)
     }
 
     // Apply active status filter (use is_active, not status)

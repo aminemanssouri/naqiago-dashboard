@@ -259,16 +259,8 @@ export default function ServicesPage() {
                 { value: 'citadine', label: 'Citadine' },
                 { value: 'berline', label: 'Berline' },
                 { value: 'moyen_suv', label: 'Moyen SUV' },
-                { value: 'grand_suv', label: 'Grand SUV / 4x4' },
-                { value: 'utilitaire', label: 'Utilitaire / Van' },
-                { value: 'sedan', label: 'Sedan' },
-                { value: 'suv', label: 'SUV' },
-                { value: 'hatchback', label: 'Hatchback' },
-                { value: 'van', label: 'Van' },
-                { value: 'truck', label: 'Truck' },
-                { value: 'motor plus 49 CC', label: 'Motor Plus 49 CC' },
-                { value: 'motor 49 CC', label: 'Motor 49 CC' },
-                { value: 'Motorcycles', label: 'Motorcycles' }
+                { value: 'grand_suv', label: 'Grand SUV' },
+                { value: 'motorcycles', label: 'Motorcycles' }
               ]
             },
             {

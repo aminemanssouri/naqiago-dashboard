@@ -77,9 +77,9 @@ export const BOOKING_STATUSES = {
 // Calculate total price including vehicle multiplier
 export const calculateBookingPrice = (basePrice, vehicleType, additionalCharges = 0, discountAmount = 0) => {
   const multiplier = VEHICLE_MULTIPLIERS[vehicleType] || 1.0
-  const adjustedBasePrice = basePrice * multiplier
-  const total = adjustedBasePrice + parseFloat(additionalCharges) - parseFloat(discountAmount)
-  return Math.max(0, total) // Ensure price is not negative
+  const subtotal = basePrice * multiplier
+  const total = subtotal + additionalCharges - discountAmount
+  return Math.max(0, total)
 }
 
 // Service row cartype → multiplier (matches ServiceForm / mobile; DB stores base only)
@@ -89,16 +89,39 @@ export const getServiceCartypeMultiplier = (cartype, multipliers = {}) => {
   const van = parseFloat(multipliers.van_multiplier) || 1.4
   const truck = parseFloat(multipliers.truck_multiplier) || 1.6
 
-  if (!cartype) return 1
+  if (!cartype) return sedan
   const t = String(cartype).toLowerCase()
-  if (t.includes('suv') || t.includes('4x4')) return suv
-  if (t.includes('van') || t.includes('utilitaire')) return van
-  if (t.includes('truck')) return truck
+  
+  // Citadine and Berline use sedan multiplier (1.00)
+  if (t.includes('citadine') || t.includes('berline') || t.includes('sedan') || t.includes('hatchback')) {
+    return sedan
+  }
+  // Moyen SUV uses suv multiplier (1.20)
+  if (t.includes('moyen') && t.includes('suv')) {
+    return suv
+  }
+  // Grand SUV uses van multiplier (1.40)
+  if (t.includes('grand') && t.includes('suv')) {
+    return van
+  }
+  // Generic SUV/4x4 uses suv multiplier (1.20)
+  if (t.includes('suv') || t.includes('4x4')) {
+    return suv
+  }
+  // Utilitaire/Van uses van multiplier (1.40)
+  if (t.includes('van') || t.includes('utilitaire')) {
+    return van
+  }
+  // Truck uses truck multiplier (1.60)
+  if (t.includes('truck')) {
+    return truck
+  }
+  // Default to sedan multiplier
   return sedan
 }
 
+// Get display price for a service based on its cartype
 export const getServiceDisplayPrice = (service) => {
-  if (!service) return 0
   const base = parseFloat(service.base_price) || 0
   const m = getServiceCartypeMultiplier(service.cartype, service)
   return base * m
