@@ -144,12 +144,8 @@ export const createService = async (serviceData) => {
       duration_minutes: parseInt(serviceData.duration_minutes),
       icon_name: serviceData.icon_name || null,
       is_active: serviceData.is_active !== undefined ? serviceData.is_active : true,
-      sedan_multiplier: parseFloat(serviceData.sedan_multiplier) || 1.00,
-      suv_multiplier: parseFloat(serviceData.suv_multiplier) || 1.20,
-      van_multiplier: parseFloat(serviceData.van_multiplier) || 1.40,
-      truck_multiplier: parseFloat(serviceData.truck_multiplier) || 1.60,
-      // Always store base; consumers (e.g. mobile) multiply by vehicle type
-      price: parseFloat(serviceData.base_price),
+      // price = base_price (no multiplier calculation)
+      price: parseFloat(serviceData.price || serviceData.base_price),
       image_url: serviceData.image_url || null,
       notes: serviceData.notes || null,
       inclusions: serviceData.inclusions || [],

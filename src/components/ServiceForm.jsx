@@ -32,54 +32,12 @@ import {
 } from 'lucide-react'
 import { createService, updateService } from '@/services/services'
 import { supabase } from '@/services/supabaseClient'
-import { getServiceCartypeMultiplier } from '@/utils/bookingUtils'
 
 export function ServiceForm({ service, mode = 'create' }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imagePreview, setImagePreview] = useState(service?.image_url || '')
-  
-  // Helper function to get multiplier based on cartype
-  const getMultiplierForCartype = (cartype) => {
-    if (!cartype) return 1.00
-    const type = String(cartype).toLowerCase()
-    
-    // Citadine and Berline use sedan multiplier (1.00)
-    if (type.includes('citadine') || type.includes('berline') || type.includes('sedan') || type.includes('hatchback')) {
-      return 1.00
-    }
-    // Moyen SUV uses suv multiplier (1.20)
-    if (type.includes('moyen') && type.includes('suv')) {
-      return 1.20
-    }
-    // Grand SUV uses van multiplier (1.40)
-    if (type.includes('grand') && type.includes('suv')) {
-      return 1.40
-    }
-    // Generic SUV/4x4 uses suv multiplier (1.20)
-    if (type.includes('suv') || type.includes('4x4')) {
-      return 1.20
-    }
-    // Utilitaire/Van uses van multiplier (1.40)
-    if (type.includes('van') || type.includes('utilitaire')) {
-      return 1.40
-    }
-    // Truck uses truck multiplier (1.60)
-    if (type.includes('truck')) {
-      return 1.60
-    }
-    // Default to sedan multiplier
-    return 1.00
-  }
-  
-  // Calculate display price from base_price when loading existing service
-  const getDisplayPrice = () => {
-    if (!service?.base_price) return ''
-    const basePrice = parseFloat(service.base_price)
-    const multiplier = getMultiplierForCartype(service.cartype)
-    return (basePrice * multiplier).toFixed(2)
-  }
   
   // Form state - matching the database schema exactly
   const [formData, setFormData] = useState({
@@ -88,14 +46,10 @@ export function ServiceForm({ service, mode = 'create' }) {
     description: service?.description || '',
     category: service?.category || '',
     cartype: service?.cartype || '',
-    price: getDisplayPrice() || service?.price || '',
+    price: service?.price || service?.base_price || '',
     duration_minutes: service?.duration_minutes || '',
     icon_name: service?.icon_name || '',
     is_active: service?.is_active !== undefined ? service.is_active : true,
-    sedan_multiplier: service?.sedan_multiplier || 1.00,
-    suv_multiplier: service?.suv_multiplier || 1.20,
-    van_multiplier: service?.van_multiplier || 1.40,
-    truck_multiplier: service?.truck_multiplier || 1.60,
     image_url: service?.image_url || '',
     notes: service?.notes || '',
     inclusions: service?.inclusions || [],
@@ -216,27 +170,20 @@ export function ServiceForm({ service, mode = 'create' }) {
     setLoading(true)
 
     try {
-      // Calculate base_price by dividing entered price by multiplier
       const enteredPrice = parseFloat(formData.price)
-      const multiplier = getMultiplierForCartype(formData.cartype)
-      const calculatedBasePrice = enteredPrice / multiplier
       
-      // Prepare data for submission
+      // Prepare data for submission — price is stored directly, no multiplier
       const submitData = {
         key: formData.key || formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, ''),
         title: formData.title,
         description: formData.description || null,
         category: formData.category,
         cartype: formData.cartype || null,
-        base_price: calculatedBasePrice,
+        base_price: enteredPrice,
+        price: enteredPrice,
         duration_minutes: parseInt(formData.duration_minutes),
         icon_name: formData.icon_name || null,
         is_active: formData.is_active,
-        sedan_multiplier: parseFloat(formData.sedan_multiplier) || 1.00,
-        suv_multiplier: parseFloat(formData.suv_multiplier) || 1.20,
-        van_multiplier: parseFloat(formData.van_multiplier) || 1.40,
-        truck_multiplier: parseFloat(formData.truck_multiplier) || 1.60,
-        price: calculatedBasePrice,
         image_url: formData.image_url || null,
         notes: formData.notes || null,
         inclusions: formData.inclusions || [],
@@ -635,7 +582,7 @@ export function ServiceForm({ service, mode = 'create' }) {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Enter the price for {formData.cartype || 'this service'}. Base price will be calculated as: {formData.price ? `${formData.price} ÷ ${getMultiplierForCartype(formData.cartype)} = ${(parseFloat(formData.price) / getMultiplierForCartype(formData.cartype)).toFixed(2)}` : 'Price ÷ Multiplier'} MAD
+                      The price customers will be charged for this service
                     </p>
                   </div>
                 </div>
