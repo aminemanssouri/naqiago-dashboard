@@ -46,20 +46,7 @@ import { getServices } from '@/services/services'
 import { format } from 'date-fns'
 import { getCarBrands, getCarModels, getCarBrandLogoUrl, getCarModelImageUrl } from '@/services/vehicles'
 import { useAuth } from '@/contexts/AuthContext'
-
-const VEHICLE_TYPES = [
-  // Categories from the vehicle API
-  { value: 'citadine', label: 'Citadine', multiplier: 1.0 },
-  { value: 'berline', label: 'Berline', multiplier: 1.1 },
-  { value: 'moyen_suv', label: 'Moyen SUV', multiplier: 1.3 },
-  { value: 'grand_suv', label: 'Grand SUV / 4x4', multiplier: 1.5 },
-  { value: 'utilitaire', label: 'Utilitaire / Van', multiplier: 1.6 },
-  // Standard fallback categories
-  { value: 'sedan', label: 'Sedan', multiplier: 1.1 },
-  { value: 'suv', label: 'SUV', multiplier: 1.3 },
-  { value: 'van', label: 'Van', multiplier: 1.5 },
-  { value: 'truck', label: 'Truck', multiplier: 1.6 }
-]
+import { VEHICLE_TYPES } from '@/utils/bookingUtils'
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash', description: 'Pay with cash on service completion' },
@@ -298,20 +285,18 @@ export function BookingForm({
     fetchModels()
   }, [selectedBrandId])
 
-  // Calculate pricing when service or vehicle changes
+  // Set price directly from service when service changes (no multiplier)
   useEffect(() => {
-    if (selectedService && selectedVehicle) {
-      const basePrice = selectedService.base_price || 0
-      const multiplier = selectedVehicle.multiplier || 1
-      const calculatedBase = basePrice * multiplier
+    if (selectedService) {
+      const servicePrice = parseFloat(selectedService.price) || 0
 
-      setCalculatedPrice(calculatedBase)
+      setCalculatedPrice(servicePrice)
       setFormData(prev => ({
         ...prev,
-        base_price: calculatedBase
+        base_price: servicePrice
       }))
     }
-  }, [selectedService, selectedVehicle])
+  }, [selectedService])
 
   // Validation function using refs
   const validateField = (fieldName, value, forceValidation = false) => {
@@ -642,7 +627,7 @@ export function BookingForm({
                 <SelectContent>
                   {services.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
-                      {service.title} - {service.base_price} MAD
+                      {service.title} - {service.price || 0} MAD
                       {service.duration_minutes && ` (${service.duration_minutes} min)`}
                     </SelectItem>
                   ))}
@@ -941,7 +926,7 @@ export function BookingForm({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="base_price">Base Price (MAD) *</Label>
+                <Label htmlFor="base_price">Service Price (MAD) *</Label>
                 <Input
                   ref={el => validationRefs.current.base_price = el}
                   type="number"

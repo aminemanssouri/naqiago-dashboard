@@ -37,13 +37,23 @@ export const getDefaultBookingForm = (userProfile = null) => {
   return defaultForm
 }
 
-// Vehicle type multipliers for pricing
-export const VEHICLE_MULTIPLIERS = {
-  sedan: 1.0,
-  suv: 1.2,
-  van: 1.4,
-  truck: 1.6
-}
+// ── Vehicle types for dropdowns ──────────────────────────────────────────────
+// Price is set directly per service — no multiplier calculations.
+export const VEHICLE_TYPES = [
+  { value: 'citadine',    label: 'Citadine' },
+  { value: 'berline',     label: 'Berline' },
+  { value: 'hatchback',   label: 'Hatchback' },
+  { value: 'sedan',       label: 'Sedan' },
+  { value: 'moyen_suv',   label: 'Moyen SUV' },
+  { value: 'suv',         label: 'SUV' },
+  { value: 'grand_suv',   label: 'Grand SUV / 4x4' },
+  { value: 'van',         label: 'Van' },
+  { value: 'utilitaire',  label: 'Utilitaire / Van' },
+  { value: 'truck',       label: 'Truck' },
+  { value: 'motor plus 49 CC', label: 'Motor Plus 49 CC' },
+  { value: 'motor 49 CC',      label: 'Motor 49 CC' },
+  { value: 'Motorcycles',      label: 'Motorcycles' },
+]
 
 // Booking status options with styling
 export const BOOKING_STATUSES = {
@@ -74,57 +84,15 @@ export const BOOKING_STATUSES = {
   }
 }
 
-// Calculate total price including vehicle multiplier
-export const calculateBookingPrice = (basePrice, vehicleType, additionalCharges = 0, discountAmount = 0) => {
-  const multiplier = VEHICLE_MULTIPLIERS[vehicleType] || 1.0
-  const subtotal = basePrice * multiplier
-  const total = subtotal + additionalCharges - discountAmount
+// Calculate total booking price (price + charges - discount, no multiplier)
+export const calculateBookingPrice = (price, _vehicleType, additionalCharges = 0, discountAmount = 0) => {
+  const total = parseFloat(price || 0) + parseFloat(additionalCharges) - parseFloat(discountAmount)
   return Math.max(0, total)
 }
 
-// Service row cartype → multiplier (matches ServiceForm / mobile; DB stores base only)
-export const getServiceCartypeMultiplier = (cartype, multipliers = {}) => {
-  const sedan = parseFloat(multipliers.sedan_multiplier) || 1.0
-  const suv = parseFloat(multipliers.suv_multiplier) || 1.2
-  const van = parseFloat(multipliers.van_multiplier) || 1.4
-  const truck = parseFloat(multipliers.truck_multiplier) || 1.6
-
-  if (!cartype) return sedan
-  const t = String(cartype).toLowerCase()
-  
-  // Citadine and Berline use sedan multiplier (1.00)
-  if (t.includes('citadine') || t.includes('berline') || t.includes('sedan') || t.includes('hatchback')) {
-    return sedan
-  }
-  // Moyen SUV uses suv multiplier (1.20)
-  if (t.includes('moyen') && t.includes('suv')) {
-    return suv
-  }
-  // Grand SUV uses van multiplier (1.40)
-  if (t.includes('grand') && t.includes('suv')) {
-    return van
-  }
-  // Generic SUV/4x4 uses suv multiplier (1.20)
-  if (t.includes('suv') || t.includes('4x4')) {
-    return suv
-  }
-  // Utilitaire/Van uses van multiplier (1.40)
-  if (t.includes('van') || t.includes('utilitaire')) {
-    return van
-  }
-  // Truck uses truck multiplier (1.60)
-  if (t.includes('truck')) {
-    return truck
-  }
-  // Default to sedan multiplier
-  return sedan
-}
-
-// Get display price for a service based on its cartype
+// Get display price for a service — simply returns the stored price
 export const getServiceDisplayPrice = (service) => {
-  const base = parseFloat(service.base_price) || 0
-  const m = getServiceCartypeMultiplier(service.cartype, service)
-  return base * m
+  return parseFloat(service.price) || 0
 }
 
 // Format booking data for display
@@ -151,7 +119,7 @@ export const formatBookingForDisplay = (booking) => {
     formatted_time: formattedTime,
     total_price: calculateBookingPrice(
       booking.base_price,
-      booking.vehicle_type,
+      null,
       booking.additional_charges,
       booking.discount_amount
     ),
@@ -364,9 +332,10 @@ export const prepareBookingDataForForm = (apiData) => {
 
 const bookingUtils = {
   getDefaultBookingForm,
-  VEHICLE_MULTIPLIERS,
+  VEHICLE_TYPES,
   BOOKING_STATUSES,
   calculateBookingPrice,
+  getServiceDisplayPrice,
   formatBookingForDisplay,
   getRequiredFields,
   getFieldErrorMessage,
